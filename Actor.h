@@ -29,6 +29,11 @@ public:
 	// Any actor-specific update code (overridable)
 	virtual void UpdateActor(float deltaTime);
 
+	// アクター独自の入力用コードでオーバーライド可能
+	virtual void ActorInput(const uint8_t* keyState);
+
+	virtual void ProcessInput(const uint8_t* keyState);
+
 	// Getters/setters
 	const Vector2& GetPosition() const { return mPosition; }
 	void SetPosition(const Vector2& pos) { mPosition = pos; }

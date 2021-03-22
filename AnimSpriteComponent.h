@@ -15,6 +15,8 @@ public:
 	AnimSpriteComponent(class Actor* owner, int drawOrder = 100);
 	// Update animation every frame (overriden from component)
 	void Update(float deltaTime) override;
+
+	void ProcessInput(const uint8_t* keyState)override;
 	// Set the textures used for animation
 	void SetAnimTextures(const std::vector<SDL_Texture*>& textures);
 	// Set/get the animation FPS

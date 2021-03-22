@@ -5,7 +5,7 @@
 // Released under the BSD License
 // See LICENSE in root directory for full details.
 // ----------------------------------------------------------------
-
+#include <SDL.h>
 #pragma once
 class Component
 {
@@ -17,6 +17,10 @@ public:
 	virtual ~Component();
 	// Update this component by delta time
 	virtual void Update(float deltaTime);
+
+	// Process input for this component
+	virtual void ProcessInput(const uint8_t* keyState){}
+
 
 	int GetUpdateOrder() const { return mUpdateOrder; }
 protected:

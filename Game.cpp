@@ -14,6 +14,8 @@
 #include "SpriteComponent.h"
 #include "Ship.h"
 #include "BGSpriteComponent.h"
+#include "Asteroid.h"
+#include "Random.h"
 
 Game::Game()
 :mWindow(nullptr)
@@ -52,6 +54,8 @@ bool Game::Initialize()
 		return false;
 	}
 
+	Random::Init();
+
 	LoadData();
 
 	mTicksCount = SDL_GetTicks();
@@ -82,14 +86,19 @@ void Game::ProcessInput()
 		}
 	}
 	
-	const Uint8* state = SDL_GetKeyboardState(NULL);
-	if (state[SDL_SCANCODE_ESCAPE])
+	const Uint8* keyState = SDL_GetKeyboardState(NULL);
+	if (keyState[SDL_SCANCODE_ESCAPE])
 	{
 		mIsRunning = false;
 	}
+	
+	mUpdatingActors = true;
+	for (auto actor : mActors)
+	{
+		actor->ProcessInput(keyState);
+	}
+	mUpdatingActors = false;
 
-	// Process ship input
-	mShip->ProcessKeyboard(state);
 }
 
 void Game::UpdateGame()
@@ -180,6 +189,13 @@ void Game::LoadData()
 	};
 	bg->SetBGTextures(bgtexs);
 	bg->SetScrollSpeed(-200.0f);
+
+	// Create asteroids
+	const int numAsteroids = 20;
+	for (int i = 0; i < numAsteroids; i++)
+	{
+		new Asteroid(this);
+	}
 }
 
 void Game::UnloadData()
@@ -300,4 +316,20 @@ void Game::RemoveSprite(SpriteComponent* sprite)
 	// (We can't swap because it ruins ordering)
 	auto iter = std::find(mSprites.begin(), mSprites.end(), sprite);
 	mSprites.erase(iter);
+}
+
+void Game::AddAsteroid(Asteroid* ast)
+{
+	mAsteroids.emplace_back(ast);
+}
+
+void Game::RemoveAsteroid(Asteroid* ast)
+{
+	auto iter = std::find(mAsteroids.begin(), mAsteroids.end(), ast);
+
+	if (iter != mAsteroids.end())
+	{
+		mAsteroids.erase(iter);
+	}
+
 }

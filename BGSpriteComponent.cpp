@@ -53,6 +53,10 @@ void BGSpriteComponent::Draw(SDL_Renderer* renderer)
 	}
 }
 
+void BGSpriteComponent::ProcessInput(const uint8_t* keyState)
+{
+}
+
 void BGSpriteComponent::SetBGTextures(const std::vector<SDL_Texture*>& textures)
 {
 	int count = 0;

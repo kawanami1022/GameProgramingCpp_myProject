@@ -18,6 +18,8 @@ public:
 	// Update/draw overriden from parent
 	void Update(float deltaTime) override;
 	void Draw(SDL_Renderer* renderer) override;
+
+	void ProcessInput(const uint8_t* keyState)override;
 	// Set the textures used for the background
 	void SetBGTextures(const std::vector<SDL_Texture*>& textures);
 	// Get/set screen size and scroll speed

@@ -37,6 +37,10 @@ void AnimSpriteComponent::Update(float deltaTime)
 	}
 }
 
+void AnimSpriteComponent::ProcessInput(const uint8_t* keyState)
+{
+}
+
 void AnimSpriteComponent::SetAnimTextures(const std::vector<SDL_Texture*>& textures)
 {
 	mAnimTextures = textures;

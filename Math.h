@@ -29,7 +29,7 @@ namespace Math
 	{
 		return radians * 180.0f / Pi;
 	}
-
+	//@brief  If it's close to zero, it won't change the direction or position of the actor.
 	inline bool NearZero(float val, float epsilon = 0.001f)
 	{
 		if (fabs(val) <= epsilon)
