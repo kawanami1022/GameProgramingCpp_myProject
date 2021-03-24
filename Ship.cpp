@@ -1,78 +1,49 @@
 // ----------------------------------------------------------------
 // From Game Programming in C++ by Sanjay Madhav
 // Copyright (C) 2017 Sanjay Madhav. All rights reserved.
-// 
+//
 // Released under the BSD License
 // See LICENSE in root directory for full details.
 // ----------------------------------------------------------------
 
 #include "Ship.h"
 #include "AnimSpriteComponent.h"
+#include "InputComponent.h"
+#include "SpriteComponent.h"
 #include "Game.h"
+#include "Laser.h"
 
 Ship::Ship(Game* game)
 	:Actor(game)
-	,mRightSpeed(0.0f)
-	,mDownSpeed(0.0f)
+	, mLaserCoolddown(0.f)
 {
-	// Create an animated sprite component
-	AnimSpriteComponent* asc = new AnimSpriteComponent(this);
-	std::vector<SDL_Texture*> anims = {
-		game->GetTexture("Assets/Ship01.png"),
-		game->GetTexture("Assets/Ship02.png"),
-		game->GetTexture("Assets/Ship03.png"),
-		game->GetTexture("Assets/Ship04.png"),
-	};
-	asc->SetAnimTextures(anims);
+	// Create a sprite component
+	SpriteComponent* sc = new SpriteComponent(this, 150);
+	sc->SetTexture(game->GetTexture("Assets/Ship.png"));
+
+	// Create an input component and set keys/speed
+	InputComponent* ic = new InputComponent(this);
+	ic->SetForwardKey(SDL_SCANCODE_W);
+	ic->SetBackKey(SDL_SCANCODE_S);
+	ic->SetClockwiseKey(SDL_SCANCODE_A);
+	ic->SetCounterClockwiseKey(SDL_SCANCODE_D);
+	ic->SetMaxForwardSpeed(300.f);
+	ic->SetMaxAngularSpeed(Math::TwoPi);
 }
 
 void Ship::UpdateActor(float deltaTime)
 {
-	Actor::UpdateActor(deltaTime);
-	// Update position based on speeds and delta time
-	Vector2 pos = GetPosition();
-	pos.x += mRightSpeed * deltaTime;
-	pos.y += mDownSpeed * deltaTime;
-	// Restrict position to left half of screen
-	if (pos.x < 25.0f)
-	{
-		pos.x = 25.0f;
-	}
-	else if (pos.x > 500.0f)
-	{
-		pos.x = 500.0f;
-	}
-	if (pos.y < 25.0f)
-	{
-		pos.y = 25.0f;
-	}
-	else if (pos.y > 743.0f)
-	{
-		pos.y = 743.0f;
-	}
-	SetPosition(pos);
+	mLaserCoolddown -= deltaTime;
 }
 
-void Ship::ProcessKeyboard(const uint8_t* state)
+void Ship::ActorInput(const uint8_t* keyState)
 {
-	mRightSpeed = 0.0f;
-	mDownSpeed = 0.0f;
-	// right/left
-	if (state[SDL_SCANCODE_D])
+	if (keyState[SDL_SCANCODE_SPACE] && mLaserCoolddown <= 0.f)
 	{
-		mRightSpeed += 250.0f;
-	}
-	if (state[SDL_SCANCODE_A])
-	{
-		mRightSpeed -= 250.0f;
-	}
-	// up/down
-	if (state[SDL_SCANCODE_S])
-	{
-		mDownSpeed += 300.0f;
-	}
-	if (state[SDL_SCANCODE_W])
-	{
-		mDownSpeed -= 300.0f;
+		// Create a laser and set its position/rotation to mine
+		Laser* laser = new Laser(GetGame());
+		laser->SetPosition(GetPosition());
+		laser->SetRotation(GetRotation());
+		mLaserCoolddown = 0.5f;
 	}
 }

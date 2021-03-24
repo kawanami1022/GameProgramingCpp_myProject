@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------
-// From Game Programming in C++ by Sanjay Madhav
-// Copyright (C) 2017 Sanjay Madhav. All rights reserved.
+// From Game Programming in C++ by San jay Madhya's
+// Copyright (C) 2017 San jay Madhya's. All rights reserved.
 // 
 // Released under the BSD License
 // See LICENSE in root directory for full details.
