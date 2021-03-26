@@ -21,7 +21,7 @@ public:
 	void UpdateActor(float deltaTime)override;
 private:
 	// select a specific tile
-	void SelecTile(size_t row, size_t col);
+	void SelectTile(size_t row, size_t col);
 
 	// update textures for tile on path
 	void UpdatePathTiles(class Tile* start);
