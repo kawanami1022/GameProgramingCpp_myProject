@@ -1,6 +1,8 @@
+#include <algorithm>
+#include "Tower.h"
 #include "Grid.h"
 #include "Tile.h"
-#include <algorithm>
+#include "Enemy.h"
 
 Grid::Grid(Game* game)
 	:Actor(game), mSelectedTile(nullptr)
@@ -55,6 +57,10 @@ Grid::Grid(Game* game)
 	UpdatePathTiles(GetStartTile());
 
 	mNextEnemy = EnemyTime;
+}
+
+void Grid::SelectTile(size_t row, size_t col)
+{
 }
 
 void Grid::ProcessClick(int x, int y)
@@ -183,24 +189,36 @@ void Grid::BuildTower()
 		if (FindPath(GetEndTile(), GetStartTile()))
 		{
 			Tower* t = new Tower(GetGame());
+			t->SetPosition(mSelectedTile->GetPosition());
 		}
+		else
+		{
+			// This tower would block the path, so don't allow build
+			mSelectedTile->mBlocked = false;
+			FindPath(GetEndTile(), GetStartTile());
+		}
+		UpdatePathTiles(GetStartTile());
 	}
 }
 
 Tile* Grid::GetStartTile()
 {
-	return nullptr;
+	return mTiles[3][0];
 }
 
 Tile* Grid::GetEndTile()
 {
-	return nullptr;
+	return mTiles[3][15];
 }
 
 void Grid::UpdateActor(float deltaTime)
 {
-}
-
-void Grid::SelectTile(size_t row, size_t col)
-{
+	Actor::UpdateActor(deltaTime);
+	// Is it time to spawn a new enemy?
+	mNextEnemy -= deltaTime;
+	if (mNextEnemy <= 0.f)
+	{
+		new Enemy(GetGame());
+		mNextEnemy += EnemyTime;
+	}
 }

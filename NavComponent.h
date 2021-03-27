@@ -1,8 +1,9 @@
 #pragma once
-#include "Component.h"
 #include "Math.h"
+#include "MoveComponent.h"
+
 class NavComponent :
-	public Component
+	public MoveComponent
 {
 public:
 	// lower Update order to Update first

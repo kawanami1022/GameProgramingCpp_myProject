@@ -12,10 +12,12 @@
 #include <algorithm>
 #include "Actor.h"
 #include "SpriteComponent.h"
-#include "Ship.h"
 #include "BGSpriteComponent.h"
-#include "Asteroid.h"
 #include "Random.h"
+#include "Grid.h"
+#include "Enemy.h"
+#include "AIComponent.h"
+#include "AIState.h"
 
 Game::Game()
 	:mWindow(nullptr)
@@ -70,6 +72,28 @@ void Game::RunLoop()
 		UpdateGame();
 		GenerateOutput();
 	}
+}
+
+Enemy* Game::GetNearestEnemy(const Vector2& pos)
+{
+	Enemy* best = nullptr;
+
+	if (mEnemies.size() > 0)
+	{
+		best = mEnemies[0];
+		// save the distance squared of first enemy, and test if others are closer
+		float bestDistSq = (pos - mEnemies[0]->GetPosition()).LengthSq();
+		for (size_t i = 1; i < mEnemies.size(); i++)
+		{
+			float newDistSq = (pos - mEnemies[i]->GetPosition()).LengthSq();
+			if (newDistSq < bestDistSq)
+			{
+				bestDistSq = newDistSq;
+				best = mEnemies[i];
+			}
+		}
+	}
+	return best;
 }
 
 void Game::ProcessInput()
@@ -161,39 +185,6 @@ void Game::GenerateOutput()
 
 void Game::LoadData()
 {
-	// Create player's ship
-	mShip = new Ship(this);
-	mShip->SetPosition(Vector2(100.0f, 384.0f));
-	mShip->SetScale(1.5f);
-
-	// Create actor for the background (this doesn't need a subclass)
-	Actor* temp = new Actor(this);
-	temp->SetPosition(Vector2(512.0f, 384.0f));
-	// Create the "far back" background
-	BGSpriteComponent* bg = new BGSpriteComponent(temp);
-	bg->SetScreenSize(Vector2(1024.0f, 768.0f));
-	std::vector<SDL_Texture*> bgtexs = {
-		GetTexture("Assets/Farback01.png"),
-		GetTexture("Assets/Farback02.png")
-	};
-	bg->SetBGTextures(bgtexs);
-	bg->SetScrollSpeed(-100.0f);
-	// Create the closer background
-	bg = new BGSpriteComponent(temp, 50);
-	bg->SetScreenSize(Vector2(1024.0f, 768.0f));
-	bgtexs = {
-		GetTexture("Assets/Stars.png"),
-		GetTexture("Assets/Stars.png")
-	};
-	bg->SetBGTextures(bgtexs);
-	bg->SetScrollSpeed(-200.0f);
-
-	// Create asteroids
-	const int numAsteroids = 20;
-	for (int i = 0; i < numAsteroids; i++)
-	{
-		new Asteroid(this);
-	}
 }
 
 void Game::UnloadData()
@@ -314,19 +305,4 @@ void Game::RemoveSprite(SpriteComponent* sprite)
 	// (We can't swap because it ruins ordering)
 	auto iter = std::find(mSprites.begin(), mSprites.end(), sprite);
 	mSprites.erase(iter);
-}
-
-void Game::AddAsteroid(Asteroid* ast)
-{
-	mAsteroids.emplace_back(ast);
-}
-
-void Game::RemoveAsteroid(Asteroid* ast)
-{
-	auto iter = std::find(mAsteroids.begin(), mAsteroids.end(), ast);
-
-	if (iter != mAsteroids.end())
-	{
-		mAsteroids.erase(iter);
-	}
 }

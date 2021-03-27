@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
-
+#include "Math.h"
 class Game
 {
 public:
@@ -26,12 +26,11 @@ public:
 	void AddSprite(class SpriteComponent* sprite);
 	void RemoveSprite(class SpriteComponent* sprite);
 
-	void AddAsteroid(class Asteroid* ast);
-	void RemoveAsteroid(class Asteroid* ast);
-	std::vector<class Asteroid*>& GetAsteroids() { return mAsteroids; }
-
 	SDL_Texture* GetTexture(const std::string& fileName);
 
+	class Grid* GetGrid() { return mGrid; }
+	std::vector<class Enemy*>& GetEnemies() { return mEnemies; }
+	class Enemy* GetNearestEnemy(const Vector2& pos);
 private:
 	void ProcessInput();
 	void UpdateGame();
@@ -58,6 +57,7 @@ private:
 	bool mUpdatingActors;
 
 	// Game-specific
-	class Ship* mShip; // Player's ship
-	std::vector<class Asteroid*> mAsteroids;
+	std::vector<class Enemy*> mEnemies;
+	class Grid* mGrid;
+	float mNextEnemy;
 };
