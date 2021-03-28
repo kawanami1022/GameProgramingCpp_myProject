@@ -115,6 +115,19 @@ void Game::ProcessInput()
 		mIsRunning = false;
 	}
 
+	if (keyState[SDL_SCANCODE_B])
+	{
+		mGrid->BuildTower();
+	}
+
+	// Process mouse
+	int x, y;
+	Uint32 buttons = SDL_GetMouseState(&x, &y);
+	if (SDL_BUTTON(buttons) & SDL_BUTTON_LEFT)
+	{
+		mGrid->ProcessClick(x, y);
+	}
+
 	mUpdatingActors = true;
 	for (auto actor : mActors)
 	{
@@ -185,6 +198,7 @@ void Game::GenerateOutput()
 
 void Game::LoadData()
 {
+	mGrid = new Grid(this);
 }
 
 void Game::UnloadData()
