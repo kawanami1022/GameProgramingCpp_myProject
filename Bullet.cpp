@@ -8,8 +8,6 @@
 Bullet::Bullet(Game* game)
 	:Actor(game)
 {
-	SpriteComponent* sc = new SpriteComponent(this);
-	sc->SetTexture(game->GetTexture("Assets/Projecttile.png"));
 
 	MoveComponent* mc = new MoveComponent(this);
 	mc->SetForwardSpeed(400.f);

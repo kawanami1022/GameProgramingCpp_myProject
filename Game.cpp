@@ -6,22 +6,17 @@
 // See LICENSE in root directory for full details.
 // ----------------------------------------------------------------
 
-#include "Game.h"
 #include <SDL.h>
 #include <SDL_image.h>
+#include <glew.h>
 #include <algorithm>
+#include "Game.h"
 #include "Actor.h"
 #include "SpriteComponent.h"
 #include "BGSpriteComponent.h"
-#include "Random.h"
-#include "Grid.h"
-#include "Enemy.h"
-#include "AIComponent.h"
-#include "AIState.h"
 
 Game::Game()
 	:mWindow(nullptr)
-	, mRenderer(nullptr)
 	, mIsRunning(true)
 	, mUpdatingActors(false)
 {
@@ -35,27 +30,41 @@ bool Game::Initialize()
 		return false;
 	}
 
-	mWindow = SDL_CreateWindow("Game Programming in C++ (Chapter 2)", 100, 100, 1024, 768, 0);
+	// Set OpenGL atribution 
+	// Use the core OpenGL profile
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+	// バージョン3.3を指定
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+
+	// RGBA各チャンネル8bitカラーバッファを使う
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+
+	// ダブルバッファを有効にする
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	// ハードウェアアクセラレーションを使う
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+
+	mWindow = SDL_CreateWindow("Game Programming in C++ (Chapter 5)", 100, 100, 1024, 768, SDL_WINDOW_OPENGL);
 	if (!mWindow)
 	{
 		SDL_Log("Failed to create window: %s", SDL_GetError());
 		return false;
 	}
 
-	mRenderer = SDL_CreateRenderer(mWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	if (!mRenderer)
+	mContext = SDL_GL_CreateContext(mWindow);
+
+	// Initialize GLEW
+	glewExperimental = GL_TRUE;
+	if (glewInit() != GLEW_OK)
 	{
-		SDL_Log("Failed to create renderer: %s", SDL_GetError());
+		SDL_Log("Failed to initialize GLEW.");
 		return false;
 	}
-
-	if (IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG) == 0)
-	{
-		SDL_Log("Unable to initialize SDL_image: %s", SDL_GetError());
-		return false;
-	}
-
-	Random::Init();
 
 	LoadData();
 
@@ -72,28 +81,6 @@ void Game::RunLoop()
 		UpdateGame();
 		GenerateOutput();
 	}
-}
-
-Enemy* Game::GetNearestEnemy(const Vector2& pos)
-{
-	Enemy* best = nullptr;
-
-	if (mEnemies.size() > 0)
-	{
-		best = mEnemies[0];
-		// save the distance squared of first enemy, and test if others are closer
-		float bestDistSq = (pos - mEnemies[0]->GetPosition()).LengthSq();
-		for (size_t i = 1; i < mEnemies.size(); i++)
-		{
-			float newDistSq = (pos - mEnemies[i]->GetPosition()).LengthSq();
-			if (newDistSq < bestDistSq)
-			{
-				bestDistSq = newDistSq;
-				best = mEnemies[i];
-			}
-		}
-	}
-	return best;
 }
 
 void Game::ProcessInput()
@@ -117,7 +104,6 @@ void Game::ProcessInput()
 
 	if (keyState[SDL_SCANCODE_B])
 	{
-		mGrid->BuildTower();
 	}
 
 	// Process mouse
@@ -125,7 +111,6 @@ void Game::ProcessInput()
 	Uint32 buttons = SDL_GetMouseState(&x, &y);
 	if (SDL_BUTTON(buttons) & SDL_BUTTON_LEFT)
 	{
-		mGrid->ProcessClick(x, y);
 	}
 
 	mUpdatingActors = true;
@@ -184,78 +169,34 @@ void Game::UpdateGame()
 
 void Game::GenerateOutput()
 {
-	SDL_SetRenderDrawColor(mRenderer, 0, 0, 0, 255);
-	SDL_RenderClear(mRenderer);
+	// クリアカラーを灰色に設定
+	glClearColor(0.86f, 0.86f, 0.86f, 1.f);
 
-	// Draw all sprite components
-	for (auto sprite : mSprites)
-	{
-		sprite->Draw(mRenderer);
-	}
+	// カラーバッファをクリア
+	glClear(GL_COLOR_BUFFER_BIT);
 
-	SDL_RenderPresent(mRenderer);
+	//TODO:シーン描画
+
+	//バッファを交換これでシーンが表示される
+	SDL_GL_SwapWindow(mWindow);
+
 }
 
 void Game::LoadData()
 {
-	mGrid = new Grid(this);
 }
 
 void Game::UnloadData()
 {
-	// Delete actors
-	// Because ~Actor calls RemoveActor, have to use a different style loop
-	while (!mActors.empty())
-	{
-		delete mActors.back();
-	}
 
-	// Destroy textures
-	for (auto i : mTextures)
-	{
-		SDL_DestroyTexture(i.second);
-	}
-	mTextures.clear();
 }
 
-SDL_Texture* Game::GetTexture(const std::string& fileName)
-{
-	SDL_Texture* tex = nullptr;
-	// Is the texture already in the map?
-	auto iter = mTextures.find(fileName);
-	if (iter != mTextures.end())
-	{
-		tex = iter->second;
-	}
-	else
-	{
-		// Load from file
-		SDL_Surface* surf = IMG_Load(fileName.c_str());
-		if (!surf)
-		{
-			SDL_Log("Failed to load texture file %s", fileName.c_str());
-			return nullptr;
-		}
-
-		// Create texture from surface
-		tex = SDL_CreateTextureFromSurface(mRenderer, surf);
-		SDL_FreeSurface(surf);
-		if (!tex)
-		{
-			SDL_Log("Failed to convert surface to texture for %s", fileName.c_str());
-			return nullptr;
-		}
-
-		mTextures.emplace(fileName.c_str(), tex);
-	}
-	return tex;
-}
 
 void Game::Shutdown()
 {
 	UnloadData();
 	IMG_Quit();
-	SDL_DestroyRenderer(mRenderer);
+	SDL_GL_DeleteContext(mContext);
 	SDL_DestroyWindow(mWindow);
 	SDL_Quit();
 }
