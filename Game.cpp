@@ -1,63 +1,68 @@
 // ----------------------------------------------------------------
 // From Game Programming in C++ by Sanjay Madhav
 // Copyright (C) 2017 Sanjay Madhav. All rights reserved.
-//
+// 
 // Released under the BSD License
 // See LICENSE in root directory for full details.
 // ----------------------------------------------------------------
 
-#include <SDL.h>
-#include <SDL_image.h>
-#include <glew.h>
-#include <algorithm>
 #include "Game.h"
+#include <glew.h>
+#include "Texture.h"
+#include "VertexArray.h"
+#include "Shader.h"
+#include <algorithm>
 #include "Actor.h"
 #include "SpriteComponent.h"
-#include "BGSpriteComponent.h"
+#include "Actor.h"
+#include "Ship.h"
+#include "Asteroid.h"
+#include "Random.h"
 
 Game::Game()
-	:mWindow(nullptr)
-	, mIsRunning(true)
-	, mUpdatingActors(false)
+:mWindow(nullptr)
+,mSpriteShader(nullptr)
+,mIsRunning(true)
+,mUpdatingActors(false)
 {
+	
 }
 
 bool Game::Initialize()
 {
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0)
+	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO) != 0)
 	{
 		SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
 		return false;
 	}
-
-	// Set OpenGL atribution 
+	
+	// Set OpenGL attributes
 	// Use the core OpenGL profile
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-	// バージョン3.3を指定
+	// Specify version 3.3
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-
-	// RGBA各チャンネル8bitカラーバッファを使う
+	// Request a color buffer with 8-bits per RGBA channel
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-
-	// ダブルバッファを有効にする
+	// Enable double buffering
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	// ハードウェアアクセラレーションを使う
+	// Force OpenGL to use hardware acceleration
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-
-	mWindow = SDL_CreateWindow("Game Programming in C++ (Chapter 5)", 100, 100, 1024, 768, SDL_WINDOW_OPENGL);
+	
+	mWindow = SDL_CreateWindow("Game Programming in C++ (Chapter 5)", 100, 100,
+							   1024, 768, SDL_WINDOW_OPENGL);
 	if (!mWindow)
 	{
 		SDL_Log("Failed to create window: %s", SDL_GetError());
 		return false;
 	}
-
+	
+	// Create an OpenGL context
 	mContext = SDL_GL_CreateContext(mWindow);
-
+	
 	// Initialize GLEW
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK)
@@ -65,11 +70,25 @@ bool Game::Initialize()
 		SDL_Log("Failed to initialize GLEW.");
 		return false;
 	}
+	
+	// On some platforms, GLEW will emit a benign error code,
+	// so clear it
+	glGetError();
+	
+	// Make sure we can create/compile shaders
+	if (!LoadShaders())
+	{
+		SDL_Log("Failed to load shaders.");
+		return false;
+	}
+
+	// Create quad for drawing sprites
+	CreateSpriteVerts();
 
 	LoadData();
 
 	mTicksCount = SDL_GetTicks();
-
+	
 	return true;
 }
 
@@ -90,27 +109,16 @@ void Game::ProcessInput()
 	{
 		switch (event.type)
 		{
-		case SDL_QUIT:
-			mIsRunning = false;
-			break;
+			case SDL_QUIT:
+				mIsRunning = false;
+				break;
 		}
 	}
-
+	
 	const Uint8* keyState = SDL_GetKeyboardState(NULL);
 	if (keyState[SDL_SCANCODE_ESCAPE])
 	{
 		mIsRunning = false;
-	}
-
-	if (keyState[SDL_SCANCODE_B])
-	{
-	}
-
-	// Process mouse
-	int x, y;
-	Uint32 buttons = SDL_GetMouseState(&x, &y);
-	if (SDL_BUTTON(buttons) & SDL_BUTTON_LEFT)
-	{
 	}
 
 	mUpdatingActors = true;
@@ -146,6 +154,7 @@ void Game::UpdateGame()
 	// Move any pending actors to mActors
 	for (auto pending : mPendingActors)
 	{
+		pending->ComputeWorldTransform();
 		mActors.emplace_back(pending);
 	}
 	mPendingActors.clear();
@@ -169,33 +178,137 @@ void Game::UpdateGame()
 
 void Game::GenerateOutput()
 {
-	// クリアカラーを灰色に設定
-	glClearColor(0.86f, 0.86f, 0.86f, 1.f);
-
-	// カラーバッファをクリア
+	// Set the clear color to grey
+	glClearColor(0.86f, 0.86f, 0.86f, 1.0f);
+	// Clear the color buffer
 	glClear(GL_COLOR_BUFFER_BIT);
+	
+	// Draw all sprite components
+	// Enable alpha blending on the color buffer
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	
+	// Set shader/vao as active
+	mSpriteShader->SetActive();
+	mSpriteVerts->SetActive();
+	for (auto sprite : mSprites)
+	{
+		sprite->Draw(mSpriteShader);
+	}
 
-	//TODO:シーン描画
-
-	//バッファを交換これでシーンが表示される
+	// Swap the buffers
 	SDL_GL_SwapWindow(mWindow);
+}
 
+bool Game::LoadShaders()
+{
+	mSpriteShader = new Shader();
+	if (!mSpriteShader->Load("Shaders/Sprite.vert", "Shaders/Sprite.frag"))
+	{
+		return false;
+	}
+
+	mSpriteShader->SetActive();
+	// Set the view-projection matrix
+	Matrix4 viewProj = Matrix4::CreateSimpleViewProj(1024.f, 768.f);
+	mSpriteShader->SetMatrixUniform("uViewProj", viewProj);
+	return true;
+}
+
+void Game::CreateSpriteVerts()
+{
+	float vertices[] = {
+		-0.5f,  0.5f, 0.f, 0.f, 0.f, // top left
+		 0.5f,  0.5f, 0.f, 1.f, 0.f, // top right
+		 0.5f, -0.5f, 0.f, 1.f, 1.f, // bottom right
+		-0.5f, -0.5f, 0.f, 0.f, 1.f  // bottom left
+	};
+
+	unsigned int indices[] = {
+		0, 1, 2,
+		2, 3, 0
+	};
+
+	mSpriteVerts = new VertexArray(vertices, 4, indices, 6);
 }
 
 void Game::LoadData()
 {
+	// Create player's ship
+	mShip = new Ship(this);
+	mShip->SetRotation(Math::PiOver2);
+
+	// Create asteroids
+	const int numAsteroids = 20;
+	for (int i = 0; i < numAsteroids; i++)
+	{
+		new Asteroid(this);
+	}
 }
 
 void Game::UnloadData()
 {
+	// Delete actors
+	// Because ~Actor calls RemoveActor, have to use a different style loop
+	while (!mActors.empty())
+	{
+		delete mActors.back();
+	}
 
+	// Destroy textures
+	for (auto i : mTextures)
+	{
+		i.second->Unload();
+		delete i.second;
+	}
+	mTextures.clear();
 }
 
+Texture* Game::GetTexture(const std::string& fileName)
+{
+	Texture* tex = nullptr;
+	auto iter = mTextures.find(fileName);
+	if (iter != mTextures.end())
+	{
+		tex = iter->second;
+	}
+	else
+	{
+		tex = new Texture();
+		if (tex->Load(fileName))
+		{
+			mTextures.emplace(fileName, tex);
+		}
+		else
+		{
+			delete tex;
+			tex = nullptr;
+		}
+	}
+	return tex;
+}
+
+void Game::AddAsteroid(Asteroid* ast)
+{
+	mAsteroids.emplace_back(ast);
+}
+
+void Game::RemoveAsteroid(Asteroid* ast)
+{
+	auto iter = std::find(mAsteroids.begin(),
+		mAsteroids.end(), ast);
+	if (iter != mAsteroids.end())
+	{
+		mAsteroids.erase(iter);
+	}
+}
 
 void Game::Shutdown()
 {
 	UnloadData();
-	IMG_Quit();
+	delete mSpriteVerts;
+	mSpriteShader->Unload();
+	delete mSpriteShader;
 	SDL_GL_DeleteContext(mContext);
 	SDL_DestroyWindow(mWindow);
 	SDL_Quit();
@@ -257,7 +370,6 @@ void Game::AddSprite(SpriteComponent* sprite)
 
 void Game::RemoveSprite(SpriteComponent* sprite)
 {
-	// (We can't swap because it ruins ordering)
 	auto iter = std::find(mSprites.begin(), mSprites.end(), sprite);
 	mSprites.erase(iter);
 }

@@ -6,51 +6,41 @@
 // See LICENSE in root directory for full details.
 // ----------------------------------------------------------------
 
-#include "Laser.h"
+#include "Asteroid.h"
 #include "SpriteComponent.h"
 #include "MoveComponent.h"
 #include "Game.h"
+#include "Random.h"
 #include "CircleComponent.h"
-#include "Asteroid.h"
 
-Laser::Laser(Game* game)
+Asteroid::Asteroid(Game* game)
 	:Actor(game)
-	,mDeathTimer(1.0f)
+	,mCircle(nullptr)
 {
+	// Initialize to random position/orientation
+	Vector2 randPos = Random::GetVector(Vector2(-512.0f, -384.0f),
+		Vector2(512.0f, 384.0f));
+	SetPosition(randPos);
+
+	SetRotation(Random::GetFloatRange(0.0f, Math::TwoPi));
+
 	// Create a sprite component
 	SpriteComponent* sc = new SpriteComponent(this);
-	sc->SetTexture(game->GetTexture("Assets/Laser.png"));
+	sc->SetTexture(game->GetTexture("Assets/Asteroid.png"));
 
 	// Create a move component, and set a forward speed
 	MoveComponent* mc = new MoveComponent(this);
-	mc->SetForwardSpeed(800.0f);
+	mc->SetForwardSpeed(150.0f);
 
 	// Create a circle component (for collision)
 	mCircle = new CircleComponent(this);
-	mCircle->SetRadius(11.0f);
+	mCircle->SetRadius(40.0f);
+
+	// Add to mAsteroids in game
+	game->AddAsteroid(this);
 }
 
-void Laser::UpdateActor(float deltaTime)
+Asteroid::~Asteroid()
 {
-	// If we run out of time, laser is dead
-	mDeathTimer -= deltaTime;
-	if (mDeathTimer <= 0.0f)
-	{
-		SetState(EDead);
-	}
-	else
-	{
-		// Do we intersect with an asteroid?
-		for (auto ast : GetGame()->GetAsteroids())
-		{
-			if (Intersect(*mCircle, *(ast->GetCircle())))
-			{
-				// The first asteroid we intersect with,
-				// set ourselves and the asteroid to dead
-				SetState(EDead);
-				ast->SetState(EDead);
-				break;
-			}
-		}
-	}
+	GetGame()->RemoveAsteroid(this);
 }
