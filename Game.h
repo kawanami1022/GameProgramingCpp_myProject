@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include "Math.h"
 
 class Game
 {
@@ -25,17 +26,21 @@ public:
 
 	void AddSprite(class SpriteComponent* sprite);
 	void RemoveSprite(class SpriteComponent* sprite);
+#ifdef DEBUG
+	class Texture* GetTexture(const std::string& fileName);
+#endif // DEBUG
 
 	void AddAsteroid(class Asteroid* ast);
 	void RemoveAsteroid(class Asteroid* ast);
 	std::vector<class Asteroid*>& GetAsteroids() { return mAsteroids; }
 
-	SDL_Texture* GetTexture(const std::string& fileName);
 
 private:
 	void ProcessInput();
 	void UpdateGame();
 	void GenerateOutput();
+	bool LoadShaders();
+	void CreateSpriteVerts();
 	void LoadData();
 	void UnloadData();
 
@@ -50,8 +55,14 @@ private:
 	// All the sprite components drawn
 	std::vector<class SpriteComponent*> mSprites;
 
+	// Sprite shader
+	class Shader* mSpriteShader;
+
+	// Sprtie vertex array
+	class VertexArray* mSpriteVerts;
+
 	SDL_Window* mWindow;
-	SDL_Renderer* mRenderer;
+	SDL_GLContext mContext;
 	Uint32 mTicksCount;
 	bool mIsRunning;
 	// Track if we're updating actors right now

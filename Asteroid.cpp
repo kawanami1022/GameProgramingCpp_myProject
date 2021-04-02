@@ -14,7 +14,6 @@ Asteroid::Asteroid(Game* game):Actor(game)
 
 	// スプライトコンポーネントを作成し、テクスチャを設定する
 	SpriteComponent* sc = new SpriteComponent(this);
-	sc->SetTexture(game->GetTexture("Assets/Asteroid.png"));
 
 	// Create a move component,and set a forward speed
 	MoveComponent* mc = new MoveComponent(this);

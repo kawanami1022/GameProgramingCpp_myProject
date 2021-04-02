@@ -17,10 +17,9 @@
 #include "BGSpriteComponent.h"
 #include "Asteroid.h"
 #include "Random.h"
-
+#include "VertexArray.h"
 Game::Game()
 	:mWindow(nullptr)
-	, mRenderer(nullptr)
 	, mIsRunning(true)
 	, mUpdatingActors(false)
 {
@@ -34,15 +33,46 @@ bool Game::Initialize()
 		return false;
 	}
 
-	mWindow = SDL_CreateWindow("Game Programming in C++ (Chapter 2)", 100, 100, 1024, 768, 0);
+	// Set OpenGL attributes
+	// use the core OpenGL profile
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	// Specify version
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	// Request a color buffer with 8-bit per RGBA channel
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	// Enable double buffering
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	// Force OpenGL to use hardware acceleration
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+
+
+	mWindow = SDL_CreateWindow("Game Programming in C++ (Chapter 2)", 100, 100, 1024, 768, SDL_WINDOW_OPENGL);
 	if (!mWindow)
 	{
 		SDL_Log("Failed to create window: %s", SDL_GetError());
 		return false;
 	}
 
-	mRenderer = SDL_CreateRenderer(mWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	if (!mRenderer)
+	// Create an OpenGL context
+	mContext = SDL_GL_CreateContext(mWindow);
+
+	// Initialize GLEW
+	glewExperimental = GL_TRUE;
+	if (glewInit() != GLEW_OK)
+	{
+		SDL_Log("Failed to initialize GLEW.");
+		return false;
+	}
+
+	// On some platforms,GLEW will emit a begin error code
+	glGetError();
+
+
+	if (!mContext)
 	{
 		SDL_Log("Failed to create renderer: %s", SDL_GetError());
 		return false;
@@ -55,7 +85,7 @@ bool Game::Initialize()
 	}
 
 	Random::Init();
-
+	CreateSpriteVerts();
 	LoadData();
 
 	mTicksCount = SDL_GetTicks();
@@ -148,53 +178,41 @@ void Game::UpdateGame()
 
 void Game::GenerateOutput()
 {
-	SDL_SetRenderDrawColor(mRenderer, 0, 0, 0, 255);
-	SDL_RenderClear(mRenderer);
+	glClearColor(0.86f, 0.86f, 0.86f, 1.f);
+	// カラーバッファをクリア
+	glClear(GL_COLOR_BUFFER_BIT);
 
-	// Draw all sprite components
-	for (auto sprite : mSprites)
-	{
-		sprite->Draw(mRenderer);
-	}
+	// バッファを交換
+	SDL_GL_SwapWindow(mWindow);
 
-	SDL_RenderPresent(mRenderer);
+}
+
+bool Game::LoadShaders()
+{
+	return false;
+}
+
+void Game::CreateSpriteVerts()
+{
+	float vertices[] = {
+		-0.5f,  0.5f, 0.f, // top left
+		 0.5f,  0.5f, 0.f, // top right
+		 0.5f, -0.5f, 0.f, // bottom right
+		-0.5f, -0.5f, 0.f, // bottom left
+	};
+
+	unsigned int indices[] = {
+		0,1,2,
+		2,3,0
+	};
+
+
+	mSpriteVerts = new VertexArray(vertices, 4, indices, 6);
 }
 
 void Game::LoadData()
 {
-	// Create player's ship
-	mShip = new Ship(this);
-	mShip->SetPosition(Vector2(100.0f, 384.0f));
-	mShip->SetScale(1.5f);
 
-	// Create actor for the background (this doesn't need a subclass)
-	Actor* temp = new Actor(this);
-	temp->SetPosition(Vector2(512.0f, 384.0f));
-	// Create the "far back" background
-	BGSpriteComponent* bg = new BGSpriteComponent(temp);
-	bg->SetScreenSize(Vector2(1024.0f, 768.0f));
-	std::vector<SDL_Texture*> bgtexs = {
-		GetTexture("Assets/Farback01.png"),
-		GetTexture("Assets/Farback02.png")
-	};
-	bg->SetBGTextures(bgtexs);
-	bg->SetScrollSpeed(-100.0f);
-	// Create the closer background
-	bg = new BGSpriteComponent(temp, 50);
-	bg->SetScreenSize(Vector2(1024.0f, 768.0f));
-	bgtexs = {
-		GetTexture("Assets/Stars.png"),
-		GetTexture("Assets/Stars.png")
-	};
-	bg->SetBGTextures(bgtexs);
-	bg->SetScrollSpeed(-200.0f);
-
-	// Create asteroids
-	const int numAsteroids = 20;
-	for (int i = 0; i < numAsteroids; i++)
-	{
-		new Asteroid(this);
-	}
 }
 
 void Game::UnloadData()
@@ -214,44 +232,13 @@ void Game::UnloadData()
 	mTextures.clear();
 }
 
-SDL_Texture* Game::GetTexture(const std::string& fileName)
-{
-	SDL_Texture* tex = nullptr;
-	// Is the texture already in the map?
-	auto iter = mTextures.find(fileName);
-	if (iter != mTextures.end())
-	{
-		tex = iter->second;
-	}
-	else
-	{
-		// Load from file
-		SDL_Surface* surf = IMG_Load(fileName.c_str());
-		if (!surf)
-		{
-			SDL_Log("Failed to load texture file %s", fileName.c_str());
-			return nullptr;
-		}
 
-		// Create texture from surface
-		tex = SDL_CreateTextureFromSurface(mRenderer, surf);
-		SDL_FreeSurface(surf);
-		if (!tex)
-		{
-			SDL_Log("Failed to convert surface to texture for %s", fileName.c_str());
-			return nullptr;
-		}
-
-		mTextures.emplace(fileName.c_str(), tex);
-	}
-	return tex;
-}
 
 void Game::Shutdown()
 {
 	UnloadData();
 	IMG_Quit();
-	SDL_DestroyRenderer(mRenderer);
+	SDL_GL_DeleteContext(mContext);
 	SDL_DestroyWindow(mWindow);
 	SDL_Quit();
 }
