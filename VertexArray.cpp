@@ -4,7 +4,7 @@
 VertexArray::VertexArray(const float* verts, unsigned int numVerts,
 	const unsigned int* indices, unsigned int numIndices)
 	:mNumVerts(numVerts)
-	,mNumIndices(numIndices)
+	, mNumIndices(numIndices)
 {
 	glGenVertexArrays(1, &mVertexArray);
 	glBindVertexArray(mVertexArray);
@@ -13,7 +13,7 @@ VertexArray::VertexArray(const float* verts, unsigned int numVerts,
 	glGenBuffers(1, &mVertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, mVertexBuffer);
 	glBufferData(GL_ARRAY_BUFFER,		// バッファの種類
-		numVerts * 3 * sizeof(int),		// コピーするバイト数
+		numVerts * 5 * sizeof(float),		// コピーするバイト数
 		verts,							// コピー元
 		GL_STATIC_DRAW);				// このデータの利用方法
 
@@ -24,15 +24,18 @@ VertexArray::VertexArray(const float* verts, unsigned int numVerts,
 		numIndices * sizeof(unsigned int),		// データのサイズ
 		indices, GL_STATIC_DRAW);
 
-	glDisableVertexAttribArray(0);
+	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(
 		0,						// 属性インデックス(1つ目はゼロ)
 		3,						// 要素数
 		GL_FLOAT,				// 要素の型
 		GL_FALSE,				// （整数型のみ使用する）
-		sizeof(float) * 3,		// ストライド(通常は各頂点のサイズ)
+		sizeof(float) * 5,		// ストライド(通常は各頂点のサイズ)
 		0						// 頂点データの開始位置からこの属性までのオフセット
 	);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5,
+		reinterpret_cast<void*>(sizeof(float) * 3));
 }
 
 VertexArray::~VertexArray()

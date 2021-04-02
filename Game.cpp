@@ -18,6 +18,8 @@
 #include "Asteroid.h"
 #include "Random.h"
 #include "VertexArray.h"
+#include "Shader.h"
+
 Game::Game()
 	:mWindow(nullptr)
 	, mIsRunning(true)
@@ -49,7 +51,6 @@ bool Game::Initialize()
 	// Force OpenGL to use hardware acceleration
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
-
 	mWindow = SDL_CreateWindow("Game Programming in C++ (Chapter 2)", 100, 100, 1024, 768, SDL_WINDOW_OPENGL);
 	if (!mWindow)
 	{
@@ -71,20 +72,12 @@ bool Game::Initialize()
 	// On some platforms,GLEW will emit a begin error code
 	glGetError();
 
-
-	if (!mContext)
+	if (!LoadShaders())
 	{
-		SDL_Log("Failed to create renderer: %s", SDL_GetError());
+		SDL_Log("Failed to load shaders.");
 		return false;
 	}
 
-	if (IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG) == 0)
-	{
-		SDL_Log("Unable to initialize SDL_image: %s", SDL_GetError());
-		return false;
-	}
-
-	Random::Init();
 	CreateSpriteVerts();
 	LoadData();
 
@@ -182,14 +175,27 @@ void Game::GenerateOutput()
 	// カラーバッファをクリア
 	glClear(GL_COLOR_BUFFER_BIT);
 
+	// スプライトのシェーダーと頂点配列オブジェクトをアクティブ化
+	mSpriteShader->SetActive();
+	mSpriteVerts->SetActive();
+	for (auto sprite : mSprites)
+	{
+		sprite->Draw(mSpriteShader);
+	}
+
 	// バッファを交換
 	SDL_GL_SwapWindow(mWindow);
-
 }
 
 bool Game::LoadShaders()
 {
-	return false;
+	mSpriteShader = new Shader();
+	if (!mSpriteShader->Load("Shader/Basic.vert", "Shader/Basic.frag"))
+	{
+		return false;
+	}
+	mSpriteShader->SetActive();
+	return true;
 }
 
 void Game::CreateSpriteVerts()
@@ -206,13 +212,11 @@ void Game::CreateSpriteVerts()
 		2,3,0
 	};
 
-
 	mSpriteVerts = new VertexArray(vertices, 4, indices, 6);
 }
 
 void Game::LoadData()
 {
-
 }
 
 void Game::UnloadData()
@@ -231,8 +235,6 @@ void Game::UnloadData()
 	}
 	mTextures.clear();
 }
-
-
 
 void Game::Shutdown()
 {

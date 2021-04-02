@@ -91,9 +91,9 @@ bool Shader::IsCompiled(GLuint shader)
 		memset(buffer, 0, 512);
 		glGetShaderInfoLog(shader, 511, nullptr, buffer);
 		SDL_Log("GLSL Compile Failed:\n%s", buffer);
+		return false;
 	}
-
-	return false;
+	return true;
 }
 
 bool Shader::IsValidProgram()

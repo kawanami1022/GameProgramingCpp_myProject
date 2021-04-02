@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------
 // From Game Programming in C++ by Sanjay Madhav
 // Copyright (C) 2017 Sanjay Madhav. All rights reserved.
-// 
+//
 // Released under the BSD License
 // See LICENSE in root directory for full details.
 // ----------------------------------------------------------------
@@ -17,7 +17,7 @@ public:
 	BGSpriteComponent(class Actor* owner, int drawOrder = 10);
 	// Update/draw overriden from parent
 	void Update(float deltaTime) override;
-	void Draw(SDL_Renderer* renderer) override;
+	void Draw(Shader* renderer) override;
 
 	void ProcessInput(const uint8_t* keyState)override;
 	// Set the textures used for the background

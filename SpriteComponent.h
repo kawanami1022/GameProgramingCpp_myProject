@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------
 // From Game Programming in C++ by Sanjay Madhav
 // Copyright (C) 2017 Sanjay Madhav. All rights reserved.
-// 
+//
 // Released under the BSD License
 // See LICENSE in root directory for full details.
 // ----------------------------------------------------------------
@@ -16,7 +16,7 @@ public:
 	SpriteComponent(class Actor* owner, int drawOrder = 100);
 	~SpriteComponent();
 
-	virtual void Draw(SDL_Renderer* renderer);
+	virtual void Draw(class Shader* shader);
 	virtual void SetTexture(SDL_Texture* texture);
 
 	int GetDrawOrder() const { return mDrawOrder; }
