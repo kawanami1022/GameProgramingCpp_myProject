@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <glew.h>
 #include "Math.h"
 
 class Game
@@ -38,7 +39,10 @@ private:
 	void ProcessInput();
 	void UpdateGame();
 	void GenerateOutput();
+#ifdef DEBUG
 	bool LoadShaders();
+#endif // DEBUG
+	GLint LoadShaders(const char* vertex_file_path, const char* fragment_file_path);
 	void CreateSpriteVerts();
 	void LoadData();
 	void UnloadData();
@@ -70,4 +74,8 @@ private:
 	// Game-specific
 	class Ship* mShip; // Player's ship
 	std::vector<class Asteroid*> mAsteroids;
+
+	GLuint vertexbuffer;
+	GLuint vertexArrayID;
+	GLuint programID;
 };

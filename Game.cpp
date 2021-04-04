@@ -7,10 +7,11 @@
 // ----------------------------------------------------------------
 
 #include "Game.h"
-#include <glew.h>
 #include <SDL.h>
 #include <SDL_image.h>
 #include <algorithm>
+#include <fstream>
+#include <sstream>
 #include "Actor.h"
 #include "SpriteComponent.h"
 #include "Ship.h"
@@ -72,6 +73,7 @@ bool Game::Initialize()
 	// On some platforms,GLEW will emit a begin error code
 	glGetError();
 
+#if DEBUG
 	if (!LoadShaders())
 	{
 		SDL_Log("Failed to load shaders.");
@@ -81,6 +83,29 @@ bool Game::Initialize()
 	CreateSpriteVerts();
 	LoadData();
 
+	if (!LoadShaders())
+	{
+		SDL_Log("Failed to load shaders.");
+		return false;
+	}
+
+	CreateSpriteVerts();
+	LoadData();
+
+#else
+
+	static const GLfloat g_vertex_buffer_data[] =
+	{
+	   -1.0f, -1.0f, 0.0f,
+	   1.0f, -1.0f, 0.0f,
+	   0.0f,  1.0f, 0.0f,
+	};
+
+	glGenBuffers(1, &vertexbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+
+#endif
 	mTicksCount = SDL_GetTicks();
 
 	return true;
@@ -174,7 +199,7 @@ void Game::GenerateOutput()
 	glClearColor(0.86f, 0.86f, 0.86f, 1.f);
 	// カラーバッファをクリア
 	glClear(GL_COLOR_BUFFER_BIT);
-
+#if DEBUG
 	// スプライトのシェーダーと頂点配列オブジェクトをアクティブ化
 	mSpriteShader->SetActive();
 	mSpriteVerts->SetActive();
@@ -182,20 +207,68 @@ void Game::GenerateOutput()
 	{
 		sprite->Draw(mSpriteShader);
 	}
+#else
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glVertexAttribPointer(
+		0,
+		3,
+		GL_FLOAT,
+		GL_FALSE,
+		0,
+		(void*)0
+	);
+	// 三角形を描きます！
+	glDrawArrays(GL_TRIANGLES, 0, 3); // 頂点0から始まります。合計3つの頂点です。&rarr;1つの三角形です。
 
+	glDisableVertexAttribArray(0);
+#endif
 	// バッファを交換
 	SDL_GL_SwapWindow(mWindow);
 }
+#ifdef DEBUG
 
 bool Game::LoadShaders()
 {
+#ifndef DEBUG
 	mSpriteShader = new Shader();
 	if (!mSpriteShader->Load("Shader/Basic.vert", "Shader/Basic.frag"))
 	{
 		return false;
 	}
 	mSpriteShader->SetActive();
+#else
+
+#endif // !DEBUG
+
 	return true;
+}
+#endif // DEBUG
+
+GLint Game::LoadShaders(const char* vertex_file_path, const char* fragment_file_path)
+{
+	// create the shader
+	GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
+	GLint FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+
+	// read the vertex shader code from the file
+	std::string vetexShaderCode;
+	std::ifstream vertexShaderStream(fragment_file_path, std::ios::in);
+
+	if (vertexShaderStream.is_open())
+	{
+		std::stringstream sstr;
+		sstr << vertexShaderStream.rdbuf();
+		vetexShaderCode = sstr.str();
+		vertexShaderStream.close();
+	}
+	else {
+		printf("Impossible to open %s. Are you in the right directory ? Don't forget to read the FAQ !\n", vertex_file_path);
+		getchar();
+		return 0;
+	}
+
+	return GLint();
 }
 
 void Game::CreateSpriteVerts()
@@ -239,6 +312,11 @@ void Game::UnloadData()
 void Game::Shutdown()
 {
 	UnloadData();
+#if 1
+	glDeleteBuffers(1, &vertexbuffer);
+	glDeleteVertexArrays(1, &vertexArrayID);
+	glDeleteProgram(programID);
+#endif
 	IMG_Quit();
 	SDL_GL_DeleteContext(mContext);
 	SDL_DestroyWindow(mWindow);
