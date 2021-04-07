@@ -1,3 +1,11 @@
+// ----------------------------------------------------------------
+// From Game Programming in C++ by Sanjay Madhav
+// Copyright (C) 2017 Sanjay Madhav. All rights reserved.
+// 
+// Released under the BSD License
+// See LICENSE in root directory for full details.
+// ----------------------------------------------------------------
+
 #pragma once
 class VertexArray
 {
@@ -6,25 +14,20 @@ public:
 		const unsigned int* indices, unsigned int numIndices);
 	~VertexArray();
 
-	// この頂点配列をアクティブにする (描画できるようにする)
+	// Activate this vertex array (so we can draw it)
 	void SetActive();
 
-	unsigned int GetNumIndices()const { return mNumIndices; }
-	unsigned int GetNumVertes()const { return mNumVerts; }
-
+	unsigned int GetNumIndices() const { return mNumIndices; }
+	unsigned int GetNumVerts() const { return mNumVerts; }
 private:
-	// 頂点バッファにある頂点数
+	// How many vertices in the vertex buffer?
 	unsigned int mNumVerts;
-
-	// インデックスバッファにあるインデックス数
+	// How many indices in the index buffer
 	unsigned int mNumIndices;
-	// 頂点バッファ
+	// OpenGL ID of the vertex buffer
 	unsigned int mVertexBuffer;
-	// インデックスバッファのopenGLID
+	// OpenGL ID of the index buffer
 	unsigned int mIndexBuffer;
-	// 頂点配列のオブジェクトOpenGL	ID
+	// OpenGL ID of the vertex array object
 	unsigned int mVertexArray;
-
-
 };
-

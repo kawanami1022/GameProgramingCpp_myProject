@@ -7,7 +7,7 @@
 // ----------------------------------------------------------------
 
 #pragma once
-#include <SDL.h>
+#include "SDL.h"
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -26,14 +26,13 @@ public:
 
 	void AddSprite(class SpriteComponent* sprite);
 	void RemoveSprite(class SpriteComponent* sprite);
-#ifdef DEBUG
-	class Texture* GetTexture(const std::string& fileName);
-#endif // DEBUG
 
+	class Texture* GetTexture(const std::string& fileName);
+
+	// Game-specific (add/remove asteroid)
 	void AddAsteroid(class Asteroid* ast);
 	void RemoveAsteroid(class Asteroid* ast);
 	std::vector<class Asteroid*>& GetAsteroids() { return mAsteroids; }
-
 private:
 	void ProcessInput();
 	void UpdateGame();
@@ -44,7 +43,7 @@ private:
 	void UnloadData();
 
 	// Map of textures loaded
-	std::unordered_map<std::string, SDL_Texture*> mTextures;
+	std::unordered_map<std::string, class Texture*> mTextures;
 
 	// All the actors in the game
 	std::vector<class Actor*> mActors;
@@ -56,8 +55,7 @@ private:
 
 	// Sprite shader
 	class Shader* mSpriteShader;
-
-	// Sprtie vertex array
+	// Sprite vertex array
 	class VertexArray* mSpriteVerts;
 
 	SDL_Window* mWindow;
@@ -68,6 +66,6 @@ private:
 	bool mUpdatingActors;
 
 	// Game-specific
-	class Ship* mShip; // Player's ship
+	class Ship* mShip;
 	std::vector<class Asteroid*> mAsteroids;
 };

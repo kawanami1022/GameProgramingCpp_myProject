@@ -19,11 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <None Include=".gitignore" />
     <None Include="glew32.dll" />
     <None Include="README.md" />
-    <None Include="Shader\Basic.frag" />
-    <None Include="Shader\Basic.vert" />
+    <None Include="Shaders\Basic.frag" />
+    <None Include="Shaders\Basic.vert" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Actor.cpp" />

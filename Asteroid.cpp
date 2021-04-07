@@ -1,38 +1,46 @@
+// ----------------------------------------------------------------
+// From Game Programming in C++ by Sanjay Madhav
+// Copyright (C) 2017 Sanjay Madhav. All rights reserved.
+// 
+// Released under the BSD License
+// See LICENSE in root directory for full details.
+// ----------------------------------------------------------------
+
 #include "Asteroid.h"
 #include "SpriteComponent.h"
-#include "CircleComponent.h"
 #include "MoveComponent.h"
-#include "Random.h"
 #include "Game.h"
+#include "Random.h"
+#include "CircleComponent.h"
 
-Asteroid::Asteroid(Game* game):Actor(game)
+Asteroid::Asteroid(Game* game)
+	:Actor(game)
+	,mCircle(nullptr)
 {
-	// ランダムな位置/向きで初期化する
-	Vector2 randPos = Random::GetVector(Vector2::Zero, Vector2(1024.f, 768.f));
+	// Initialize to random position/orientation
+	Vector2 randPos = Random::GetVector(Vector2(-512.0f, -384.0f),
+		Vector2(512.0f, 384.0f));
 	SetPosition(randPos);
-	SetRotation(Random::GetFloatRange(0.f, Math::TwoPi));
 
-	// スプライトコンポーネントを作成し、テクスチャを設定する
+	SetRotation(Random::GetFloatRange(0.0f, Math::TwoPi));
+
+	// Create a sprite component
 	SpriteComponent* sc = new SpriteComponent(this);
+	sc->SetTexture(game->GetTexture("Assets/Asteroid.png"));
 
-	// Create a move component,and set a forward speed
+	// Create a move component, and set a forward speed
 	MoveComponent* mc = new MoveComponent(this);
-	mc->SetForwardSpeed(150.f);
+	mc->SetForwardSpeed(150.0f);
 
-	// Create a circle component(for collision)
+	// Create a circle component (for collision)
 	mCircle = new CircleComponent(this);
-	mCircle->SetRadius(40.f);
+	mCircle->SetRadius(40.0f);
 
-	// Add to mAsteroid
+	// Add to mAsteroids in game
 	game->AddAsteroid(this);
 }
 
 Asteroid::~Asteroid()
 {
 	GetGame()->RemoveAsteroid(this);
-}
-
-CircleComponent* Asteroid::GetCircle()
-{
-	return mCircle;
 }

@@ -1,10 +1,20 @@
+// ----------------------------------------------------------------
+// From Game Programming in C++ by Sanjay Madhav
+// Copyright (C) 2017 Sanjay Madhav. All rights reserved.
+// 
+// Released under the BSD License
+// See LICENSE in root directory for full details.
+// ----------------------------------------------------------------
+
 #include "MoveComponent.h"
 #include "Actor.h"
 
-
-MoveComponent::MoveComponent(Actor* owner, int updateOrder):
-	Component(owner,updateOrder),mAngularSpeed(0.f),mForwardSpeed(0.f)
+MoveComponent::MoveComponent(class Actor* owner, int updateOrder)
+:Component(owner, updateOrder)
+,mAngularSpeed(0.0f)
+,mForwardSpeed(0.0f)
 {
+	
 }
 
 void MoveComponent::Update(float deltaTime)
@@ -15,23 +25,17 @@ void MoveComponent::Update(float deltaTime)
 		rot += mAngularSpeed * deltaTime;
 		mOwner->SetRotation(rot);
 	}
+	
 	if (!Math::NearZero(mForwardSpeed))
 	{
 		Vector2 pos = mOwner->GetPosition();
 		pos += mOwner->GetForward() * mForwardSpeed * deltaTime;
 
-		// screen wrapping code only for asteroids
-		// when the actor is off screen , this Move it to the opposite position.
-		if (pos.x < 0.f) { pos.x = 1022.f; }
-		else if (pos.x > 1024.f) { pos.x = 2.f; }
-
-		if (pos.y < 0.f) { pos.y = 766.f; }
-		else if (pos.y > 768.f) { pos.y = 2.f; }
-
+		// Screen wrapping (for asteroids)
+		if (pos.x < -512.0f) { pos.x = 510.0f; }
+		else if (pos.x > 512.0f) { pos.x = -510.0f; }
+		if (pos.y < -384.0f) { pos.y = 382.0f; }
+		else if (pos.y > 384.0f) { pos.y = -382.0f; }
 		mOwner->SetPosition(pos);
 	}
-}
-
-void MoveComponent::ProcessInput(const uint8_t* keyState)
-{
 }

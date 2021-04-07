@@ -1,28 +1,40 @@
+// ----------------------------------------------------------------
+// From Game Programming in C++ by Sanjay Madhav
+// Copyright (C) 2017 Sanjay Madhav. All rights reserved.
+//
+// Released under the BSD License
+// See LICENSE in root directory for full details.
+// ----------------------------------------------------------------
+
 #pragma once
-#include <string>
 #include <glew.h>
+#include <string>
+#include "Math.h"
+
 class Shader
 {
 public:
 	Shader();
 	~Shader();
-
-	// 指定された名前の頂点/フラグメントシェーダーを読み込む
+	// Load the vertex/fragment shaders with the given names
 	bool Load(const std::string& vertName, const std::string& fragName);
-	// アクティブなシェーダープログラムとして設定
+	void Unload();
+	// Set this as the active shader program
 	void SetActive();
+	// Sets a Matrix uniform
+	void SetMatrixUniform(const char* name, const Matrix4& matrix);
 private:
-	// シェーダーをコンパイルする
+	// Tries to compile the specified shader
 	bool CompileShader(const std::string& fileName,
-		GLenum shaderType, GLuint& outShader);
+		GLenum shaderType,
+		GLuint& outShader);
 
-	// シェーダーのコンパイルに成功したのかを判定
+	// Tests whether shader compiled successfully
 	bool IsCompiled(GLuint shader);
-
-	// 頂点/フラグメントプログラムのリンクを確認
+	// Tests whether vertex/fragment programs link
 	bool IsValidProgram();
-
-	// シェーダーオブジェクトIDを格納
+private:
+	// Store the shader object IDs
 	GLuint mVertexShader;
 	GLuint mFragShader;
 	GLuint mShaderProgram;

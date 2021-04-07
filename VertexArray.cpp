@@ -1,3 +1,11 @@
+// ----------------------------------------------------------------
+// From Game Programming in C++ by Sanjay Madhav
+// Copyright (C) 2017 Sanjay Madhav. All rights reserved.
+//
+// Released under the BSD License
+// See LICENSE in root directory for full details.
+// ----------------------------------------------------------------
+
 #include "VertexArray.h"
 #include <glew.h>
 
@@ -6,33 +14,25 @@ VertexArray::VertexArray(const float* verts, unsigned int numVerts,
 	:mNumVerts(numVerts)
 	, mNumIndices(numIndices)
 {
+	// Create vertex array
 	glGenVertexArrays(1, &mVertexArray);
 	glBindVertexArray(mVertexArray);
 
-	// create vertex array
+	// Create vertex buffer
 	glGenBuffers(1, &mVertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, mVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER,		// バッファの種類
-		numVerts * 5 * sizeof(float),		// コピーするバイト数
-		verts,							// コピー元
-		GL_STATIC_DRAW);				// このデータの利用方法
+	glBufferData(GL_ARRAY_BUFFER, numVerts * 5 * sizeof(float), verts, GL_STATIC_DRAW);
 
-	// create index buffer
+	// Create index buffer
 	glGenBuffers(1, &mIndexBuffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER,		// インデックスバッファの指定
-		numIndices * sizeof(unsigned int),		// データのサイズ
-		indices, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, numIndices * sizeof(unsigned int), indices, GL_STATIC_DRAW);
 
+	// Specify the vertex attributes
+	// (For now, assume one vertex format)
+	// Position is 3 floats starting at offset 0
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(
-		0,						// 属性インデックス(1つ目はゼロ)
-		3,						// 要素数
-		GL_FLOAT,				// 要素の型
-		GL_FALSE,				// （整数型のみ使用する）
-		sizeof(float) * 5,		// ストライド(通常は各頂点のサイズ)
-		0						// 頂点データの開始位置からこの属性までのオフセット
-	);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, 0);
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5,
 		reinterpret_cast<void*>(sizeof(float) * 3));

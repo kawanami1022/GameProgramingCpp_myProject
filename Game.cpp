@@ -8,20 +8,20 @@
 
 #include "Game.h"
 #include <glew.h>
-#include <SDL.h>
-#include <SDL_image.h>
+#include "Texture.h"
+#include "VertexArray.h"
+#include "Shader.h"
 #include <algorithm>
 #include "Actor.h"
 #include "SpriteComponent.h"
+#include "Actor.h"
 #include "Ship.h"
-#include "BGSpriteComponent.h"
 #include "Asteroid.h"
 #include "Random.h"
-#include "VertexArray.h"
-#include "Shader.h"
 
 Game::Game()
 	:mWindow(nullptr)
+	, mSpriteShader(nullptr)
 	, mIsRunning(true)
 	, mUpdatingActors(false)
 {
@@ -36,12 +36,12 @@ bool Game::Initialize()
 	}
 
 	// Set OpenGL attributes
-	// use the core OpenGL profile
+	// Use the core OpenGL profile
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	// Specify version
+	// Specify version 3.3
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-	// Request a color buffer with 8-bit per RGBA channel
+	// Request a color buffer with 8-bits per RGBA channel
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
@@ -51,7 +51,8 @@ bool Game::Initialize()
 	// Force OpenGL to use hardware acceleration
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
-	mWindow = SDL_CreateWindow("Game Programming in C++ (Chapter 2)", 100, 100, 1024, 768, SDL_WINDOW_OPENGL);
+	mWindow = SDL_CreateWindow("Game Programming in C++ (Chapter 5)", 100, 100,
+		1024, 768, SDL_WINDOW_OPENGL);
 	if (!mWindow)
 	{
 		SDL_Log("Failed to create window: %s", SDL_GetError());
@@ -69,16 +70,20 @@ bool Game::Initialize()
 		return false;
 	}
 
-	// On some platforms,GLEW will emit a begin error code
+	// On some platforms, GLEW will emit a benign error code,
+	// so clear it
 	glGetError();
 
+	// Make sure we can create/compile shaders
 	if (!LoadShaders())
 	{
 		SDL_Log("Failed to load shaders.");
 		return false;
 	}
 
+	// Create quad for drawing sprites
 	CreateSpriteVerts();
+
 	LoadData();
 
 	mTicksCount = SDL_GetTicks();
@@ -148,6 +153,7 @@ void Game::UpdateGame()
 	// Move any pending actors to mActors
 	for (auto pending : mPendingActors)
 	{
+		pending->ComputeWorldTransform();
 		mActors.emplace_back(pending);
 	}
 	mPendingActors.clear();
@@ -171,11 +177,17 @@ void Game::UpdateGame()
 
 void Game::GenerateOutput()
 {
-	glClearColor(0.86f, 0.86f, 0.86f, 1.f);
-	// カラーバッファをクリア
+	// Set the clear color to grey
+	glClearColor(0.86f, 0.86f, 0.86f, 1.0f);
+	// Clear the color buffer
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	// スプライトのシェーダーと頂点配列オブジェクトをアクティブ化
+	// Draw all sprite components
+	// Enable alpha blending on the color buffer
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	// Set shader/vao as active
 	mSpriteShader->SetActive();
 	mSpriteVerts->SetActive();
 	for (auto sprite : mSprites)
@@ -183,33 +195,37 @@ void Game::GenerateOutput()
 		sprite->Draw(mSpriteShader);
 	}
 
-	// バッファを交換
+	// Swap the buffers
 	SDL_GL_SwapWindow(mWindow);
 }
 
 bool Game::LoadShaders()
 {
 	mSpriteShader = new Shader();
-	if (!mSpriteShader->Load("Shader/Basic.vert", "Shader/Basic.frag"))
+	if (!mSpriteShader->Load("Shaders/Basic.vert", "Shaders/Basic.frag"))
 	{
 		return false;
 	}
+
 	mSpriteShader->SetActive();
+	// Set the view-projection matrix
+	Matrix4 viewProj = Matrix4::CreateSimpleViewProj(1024.f, 768.f);
+	mSpriteShader->SetMatrixUniform("uViewProj", viewProj);
 	return true;
 }
 
 void Game::CreateSpriteVerts()
 {
 	float vertices[] = {
-		-0.5f,  0.5f, 0.f, // top left
-		 0.5f,  0.5f, 0.f, // top right
-		 0.5f, -0.5f, 0.f, // bottom right
-		-0.5f, -0.5f, 0.f, // bottom left
+		-0.5f,  0.5f, 0.f, 0.f, 0.f, // top left
+		 0.5f,  0.5f, 0.f, 1.f, 0.f, // top right
+		 0.5f, -0.5f, 0.f, 1.f, 1.f, // bottom right
+		-0.5f, -0.5f, 0.f, 0.f, 1.f  // bottom left
 	};
 
 	unsigned int indices[] = {
-		0,1,2,
-		2,3,0
+		0, 1, 2,
+		2, 3, 0
 	};
 
 	mSpriteVerts = new VertexArray(vertices, 4, indices, 6);
@@ -217,6 +233,16 @@ void Game::CreateSpriteVerts()
 
 void Game::LoadData()
 {
+	// Create player's ship
+	mShip = new Ship(this);
+	mShip->SetRotation(Math::PiOver2);
+
+	// Create asteroids
+	const int numAsteroids = 20;
+	for (int i = 0; i < numAsteroids; i++)
+	{
+		new Asteroid(this);
+	}
 }
 
 void Game::UnloadData()
@@ -231,15 +257,57 @@ void Game::UnloadData()
 	// Destroy textures
 	for (auto i : mTextures)
 	{
-		SDL_DestroyTexture(i.second);
+		i.second->Unload();
+		delete i.second;
 	}
 	mTextures.clear();
+}
+
+Texture* Game::GetTexture(const std::string& fileName)
+{
+	Texture* tex = nullptr;
+	auto iter = mTextures.find(fileName);
+	if (iter != mTextures.end())
+	{
+		tex = iter->second;
+	}
+	else
+	{
+		tex = new Texture();
+		if (tex->Load(fileName))
+		{
+			mTextures.emplace(fileName, tex);
+		}
+		else
+		{
+			delete tex;
+			tex = nullptr;
+		}
+	}
+	return tex;
+}
+
+void Game::AddAsteroid(Asteroid* ast)
+{
+	mAsteroids.emplace_back(ast);
+}
+
+void Game::RemoveAsteroid(Asteroid* ast)
+{
+	auto iter = std::find(mAsteroids.begin(),
+		mAsteroids.end(), ast);
+	if (iter != mAsteroids.end())
+	{
+		mAsteroids.erase(iter);
+	}
 }
 
 void Game::Shutdown()
 {
 	UnloadData();
-	IMG_Quit();
+	delete mSpriteVerts;
+	mSpriteShader->Unload();
+	delete mSpriteShader;
 	SDL_GL_DeleteContext(mContext);
 	SDL_DestroyWindow(mWindow);
 	SDL_Quit();
@@ -301,22 +369,6 @@ void Game::AddSprite(SpriteComponent* sprite)
 
 void Game::RemoveSprite(SpriteComponent* sprite)
 {
-	// (We can't swap because it ruins ordering)
 	auto iter = std::find(mSprites.begin(), mSprites.end(), sprite);
 	mSprites.erase(iter);
-}
-
-void Game::AddAsteroid(Asteroid* ast)
-{
-	mAsteroids.emplace_back(ast);
-}
-
-void Game::RemoveAsteroid(Asteroid* ast)
-{
-	auto iter = std::find(mAsteroids.begin(), mAsteroids.end(), ast);
-
-	if (iter != mAsteroids.end())
-	{
-		mAsteroids.erase(iter);
-	}
 }

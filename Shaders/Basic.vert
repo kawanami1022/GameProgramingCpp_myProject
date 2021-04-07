@@ -6,15 +6,18 @@
 // See LICENSE in root directory for full details.
 // ----------------------------------------------------------------
 
-#pragma once
-#include "Actor.h"
-class Asteroid : public Actor
+// Request GLSL 3.3
+#version 330
+
+// This should correspond to the data stored
+// for each vertex in the vertex buffer.
+// For now, just a position.
+in vec3 inPosition;
+
+void main()
 {
-public:
-	Asteroid(class Game* game);
-	~Asteroid();
-	
-	class CircleComponent* GetCircle() { return mCircle; }
-private:
-	class CircleComponent* mCircle;
-};
+	// The vertex shader needs to output a 4D
+	// coordinate.
+	// For now set the 4th coordinate to 1.0
+	gl_Position = vec4(inPosition, 1.0);
+}

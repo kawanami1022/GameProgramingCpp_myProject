@@ -1,11 +1,19 @@
-#include <sstream>
-#include <fstream>
-#include <SDL.h>
-#include "Texture.h"
+// ----------------------------------------------------------------
+// From Game Programming in C++ by Sanjay Madhav
+// Copyright (C) 2017 Sanjay Madhav. All rights reserved.
+//
+// Released under the BSD License
+// See LICENSE in root directory for full details.
+// ----------------------------------------------------------------
+
 #include "Shader.h"
+#include "Texture.h"
+#include <SDL.h>
+#include <fstream>
+#include <sstream>
 
 Shader::Shader()
-	:mShaderProgram(0)
+	: mShaderProgram(0)
 	, mVertexShader(0)
 	, mFragShader(0)
 {
@@ -13,55 +21,76 @@ Shader::Shader()
 
 Shader::~Shader()
 {
-	glDeleteProgram(mShaderProgram);
-	glDeleteShader(mVertexShader);
-	glDeleteShader(mFragShader);
 }
 
 bool Shader::Load(const std::string& vertName, const std::string& fragName)
 {
-	// 頂点シェーダーとフラグメントシェーダーをコンパイルする
-	if (!CompileShader(vertName, GL_VERTEX_SHADER, mVertexShader) ||
-		!CompileShader(fragName, GL_FRAGMENT_SHADER, mFragShader))
+	// Compile vertex and pixel shaders
+	if (!CompileShader(vertName,
+		GL_VERTEX_SHADER,
+		mVertexShader) ||
+		!CompileShader(fragName,
+			GL_FRAGMENT_SHADER,
+			mFragShader))
 	{
 		return false;
 	}
 
-	// 頂点/フラグメントシェーダーをリンクして
-	// シェーダープログラムを作る
+	// Now create a shader program that
+	// links together the vertex/frag shaders
 	mShaderProgram = glCreateProgram();
 	glAttachShader(mShaderProgram, mVertexShader);
 	glAttachShader(mShaderProgram, mFragShader);
 	glLinkProgram(mShaderProgram);
 
-	// プログラムがただしくリンクされたことを確認
+	// Verify that the program linked successfully
 	if (!IsValidProgram())
 	{
 		return false;
 	}
+
 	return true;
+}
+
+void Shader::Unload()
+{
+	// Delete the program/shaders
+	glDeleteProgram(mShaderProgram);
+	glDeleteShader(mVertexShader);
+	glDeleteShader(mFragShader);
 }
 
 void Shader::SetActive()
 {
+	// Set this program as the active one
 	glUseProgram(mShaderProgram);
 }
 
-bool Shader::CompileShader(const std::string& fileName, GLenum shaderType, GLuint& outShader)
+void Shader::SetMatrixUniform(const char* name, const Matrix4& matrix)
 {
-	// ファイルを開く
+	// Find the uniform by this name
+	GLuint loc = glGetUniformLocation(mShaderProgram, name);
+	// Send the matrix data to the uniform
+	glUniformMatrix4fv(loc, 1, GL_TRUE, matrix.GetAsFloatPtr());
+}
+
+bool Shader::CompileShader(const std::string& fileName,
+	GLenum shaderType,
+	GLuint& outShader)
+{
+	// Open file
 	std::ifstream shaderFile(fileName);
 	if (shaderFile.is_open())
 	{
-		// すべてのテキストを1つの文字列に読み込む
+		// Read all the text into a string
 		std::stringstream sstream;
 		sstream << shaderFile.rdbuf();
 		std::string contents = sstream.str();
 		const char* contentsChar = contents.c_str();
 
-		// 指定されたタイプのシェーダーを作成
+		// Create a shader of the specified type
 		outShader = glCreateShader(shaderType);
-		// 読み込んだ文字列でのコンパイルを試みる
+		// Set the source characters and try to compile
 		glShaderSource(outShader, 1, &(contentsChar), nullptr);
 		glCompileShader(outShader);
 
@@ -76,15 +105,16 @@ bool Shader::CompileShader(const std::string& fileName, GLenum shaderType, GLuin
 		SDL_Log("Shader file not found: %s", fileName.c_str());
 		return false;
 	}
+
 	return true;
 }
 
 bool Shader::IsCompiled(GLuint shader)
 {
 	GLint status;
-
-	// コンパイル状態を問い合わせる
+	// Query the compile status
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+
 	if (status != GL_TRUE)
 	{
 		char buffer[512];
@@ -93,6 +123,7 @@ bool Shader::IsCompiled(GLuint shader)
 		SDL_Log("GLSL Compile Failed:\n%s", buffer);
 		return false;
 	}
+
 	return true;
 }
 
@@ -106,8 +137,9 @@ bool Shader::IsValidProgram()
 		char buffer[512];
 		memset(buffer, 0, 512);
 		glGetProgramInfoLog(mShaderProgram, 511, nullptr, buffer);
-		SDL_Log("GLSL link Status:\n%s", buffer);
+		SDL_Log("GLSL Link Status:\n%s", buffer);
 		return false;
 	}
+
 	return true;
 }
