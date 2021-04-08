@@ -202,7 +202,7 @@ void Game::GenerateOutput()
 bool Game::LoadShaders()
 {
 	mSpriteShader = new Shader();
-	if (!mSpriteShader->Load("Shaders/Basic.vert", "Shaders/Basic.frag"))
+	if (!mSpriteShader->Load("Shaders/Sprite.vert", "Shaders/Sprite.frag"))
 	{
 		return false;
 	}
