@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------
 // From Game Programming in C++ by Sanjay Madhav
 // Copyright (C) 2017 Sanjay Madhav. All rights reserved.
-// 
+//
 // Released under the BSD License
 // See LICENSE in root directory for full details.
 // ----------------------------------------------------------------
@@ -13,11 +13,11 @@
 
 Actor::Actor(Game* game)
 	:mState(EActive)
-	,mPosition(Vector2::Zero)
-	,mScale(1.0f)
-	,mRotation(0.0f)
-	,mGame(game)
-	,mRecomputeWorldTransform(true)
+	, mPosition(Vector3::Zero)
+	, mRotation(Quaternion::Identity)
+	, mScale(1.0f)
+	, mGame(game)
+	, mRecomputeWorldTransform(true)
 {
 	mGame->AddActor(this);
 }
@@ -83,8 +83,8 @@ void Actor::ComputeWorldTransform()
 		mRecomputeWorldTransform = false;
 		// Scale, then rotate, then translate
 		mWorldTransform = Matrix4::CreateScale(mScale);
-		mWorldTransform *= Matrix4::CreateRotationZ(mRotation);
-		mWorldTransform *= Matrix4::CreateTranslation(Vector3(mPosition.x, mPosition.y, 0.0f));
+		mWorldTransform *= Matrix4::CreateFromQuaternion(mRotation);
+		mWorldTransform *= Matrix4::CreateTranslation(mPosition);
 
 		// Inform components world transform updated
 		for (auto comp : mComponents)
